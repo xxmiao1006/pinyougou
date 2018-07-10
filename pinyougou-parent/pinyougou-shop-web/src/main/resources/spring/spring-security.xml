@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+			 xmlns:beans="http://www.springframework.org/schema/beans"
+			 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+			 xmlns:dubbo="http://code.alibabatech.com/schema/dubbo"
+			 xmlns:context="http://www.springframework.org/schema/context"
+			 xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+						http://code.alibabatech.com/schema/dubbo http://code.alibabatech.com/schema/dubbo/dubbo.xsd
+						http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- 以下资源不被拦截 -->
+	<http pattern="/*.html" security="none"></http>
+	<http pattern="/css/**" security="none"></http>
+	<http pattern="/img/**" security="none"></http>
+	<http pattern="/js/**" security="none"></http>
+	<http pattern="/plugins/**" security="none"></http>
+	<http pattern="/seller/add.do" security="none"></http>
+
+	<!-- 页面拦截规则 use-expressions指定SpEL是否启用，若启用access应采用hasROLE()-->
+	<http use-expressions="false">
+		<intercept-url pattern="/**" access="ROLE_SELLER" />
+		<!-- login-processing-url可以指定登录页表单action数据传入的地址，默认为/login default-target-url指定登录成功访问地址  always-use-default-target指定登录成功总是跳转默认页面，默认跳转最近访问过的页面 -->
+		<form-login login-page="/shoplogin.html"  default-target-url="/admin/index.html" authentication-failure-url="/shoplogin.html" always-use-default-target="true"/>
+		<!--禁用CSRF,因为不使用JSP-->
+		<csrf disabled="true"/>
+		<headers>
+			<!-- 允许使用框架页-->
+			<frame-options policy="SAMEORIGIN"/>
+		</headers>
+		<!-- 自动产生一个退出的地址 /logout-->
+		<logout/>
+	</http>
+
+	<!-- 认证管理器 -->
+	<authentication-manager>
+		<authentication-provider user-service-ref="userDetailService">
+			<!-- 校验时使用加密工具校验 -->
+			<password-encoder ref="bCryptEncoder"></password-encoder>
+		</authentication-provider>
+	</authentication-manager>
+
+	<!-- 认证类-->
+	<beans:bean id="userDetailService" class="com.pinyougou.service.UserDetailsServiceImpl">
+		<beans:property name="sellerService" ref="sellerService"></beans:property>
+	</beans:bean>
+
+
+	<!-- 引用dubbo 服务 -->
+	<dubbo:application name="pinyougou-shop-web" />
+
+	<!-- 通过dubbo从远程抓取SellerService的实现类 -->
+	<dubbo:reference id="sellerService" interface="com.pinyougou.sellergoods.service.SellerService"></dubbo:reference>
+
+	<beans:bean id="bCryptEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder"></beans:bean>
+</beans:beans>
